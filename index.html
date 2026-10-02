@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChronoBazar - Time Looting RPG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex flex-col justify-between p-4 selection:bg-amber-500 selection:text-slate-950">
+
+    <!-- Header / Profil Pemain -->
+    <header class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex items-center justify-between">
+        <div>
+            <h1 id="user-name" class="font-bold text-lg text-amber-400">Memuat Pemain...</h1>
+            <p class="text-xs text-slate-400">ID: <span id="user-id">-</span></p>
+        </div>
+        <div class="text-right">
+            <div class="bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-xl text-amber-400 text-xs font-semibold inline-block mb-1">
+                ⚡ Energi: <span id="user-energy">100</span>
+            </div>
+            <div class="text-xs text-purple-400 font-medium">
+                💎 Koin Waktu: <span id="user-coins">0</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Konten Utama Game -->
+    <main class="my-auto text-center space-y-6">
+        <div id="loot-icon" class="inline-block p-4 bg-purple-600/20 border border-purple-500/40 rounded-3xl transition-transform duration-300">
+            <span class="text-4xl">⏳</span>
+        </div>
+        <div>
+            <h2 class="text-2xl font-extrabold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-purple-500">
+                CHRONO BAZAR
+            </h2>
+            <p id="game-status" class="text-sm text-slate-400 mt-1">Siap menjelajahi celah waktu untuk mencari artefak langka.</p>
+        </div>
+
+        <!-- Tombol Aksi Utama -->
+        <div class="space-y-3">
+            <button onclick="startLooting()" id="btn-loot" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 font-bold rounded-xl shadow-lg hover:opacity-90 active:scale-95 transition-all text-slate-950">
+                Mulai Time-Looting
+            </button>
+            <button onclick="openMarket()" class="w-full py-3.5 bg-slate-900 border border-slate-800 font-semibold rounded-xl hover:bg-slate-800 transition-all text-slate-300">
+                Buka Pasar Lelang (Limited)
+            </button>
+        </div>
+
+        <!-- Panel Inventory / Hasil Loot Terakhir -->
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 text-left">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">📦 Hasil Temuan Terakhir:</h3>
+            <p id="latest-loot" class="text-xs text-slate-300 italic">Belum ada artefak yang diamankan.</p>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-slate-500 pb-2">
+        ChronoBazar Engine v1.0 • Telegram Mini Apps
+    </footer>
+
+    <!-- Skrip Game -->
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // State Game Sederhana (Sementara di Browser)
+        let gameState = {
+            energy: 100,
+            coins: 50,
+            inventory: []
+        };
+
+        // Inisialisasi User Telegram
+        const user = tg.initDataUnsafe?.user;
+        if (user) {
+            document.getElementById('user-name').innerText = user.first_name + (user.last_name ? ' ' + user.last_name : '');
+            document.getElementById('user-id').innerText = user.id;
+        } else {
+            document.getElementById('user-name').innerText = "Commander (Guest)";
+            document.getElementById('user-id').innerText = "DEV_MODE";
+        }
+
+        // Daftar Item Langka (Time-Loot Pool)
+        const lootPool = [
+            { name: "Jam Pasir Kuno Era Majapahit", rarity: "Common", value: 15 },
+            { name: "Baterai Plasma Tahun 3024", rarity: "Rare", value: 40 },
+            { name: "Fosil Foton Abadi", rarity: "Epic", value: 100 },
+            { name: "Kertas Kontrak Lintasan Waktu (Limited)", rarity: "Legendary", value: 250 }
+        ];
+
+        function updateUI() {
+            document.getElementById('user-energy').innerText = gameState.energy;
+            document.getElementById('user-coins').innerText = gameState.coins;
+        }
+
+        function startLooting() {
+            if (gameState.energy < 15) {
+                tg.HapticFeedback.notificationOccurred('error');
+                alert("Energi waktu habis! Tunggu pengisian ulang.");
+                return;
+            }
+
+            // Kurangi energi & beri efek getar
+            gameState.energy -= 15;
+            tg.HapticFeedback.impactOccurred('medium');
+
+            // Animasi ikon berputar
+            const icon = document.getElementById('loot-icon');
+            icon.classList.add('rotate-12', 'scale-110');
+            document.getElementById('game-status').innerText = "Menembus celah dimensi waktu...";
+
+            setTimeout(() => {
+                icon.classList.remove('rotate-12', 'scale-110');
+                
+                // Pilih item secara acak dari lootPool
+                const foundItem = lootPool[Math.floor(Math.random() * lootPool.length)];
+                gameState.coins += foundItem.value;
+                gameState.inventory.push(foundItem);
+
+                // Update tampilan hasil
+                document.getElementById('game-status').innerText = "Looting berhasil! Artefak diamankan.";
+                document.getElementById('latest-loot').innerHTML = `✨ <span class="text-amber-400 font-semibold">${foundItem.name}</span> (${foundItem.rarity}) - Berhasil diamankan!`;
+
+                updateUI();
+                tg.HapticFeedback.notificationOccurred('success');
+            }, 1000);
+        }
+
+        function openMarket() {
+            tg.HapticFeedback.selectionChanged();
+            alert("Pasar lelang global dengan sistem stok terbatas (Limited Edition) akan segera dibuka pada tahap backend berikutnya!");
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
